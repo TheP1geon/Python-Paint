@@ -1,0 +1,319 @@
+#!/bin/python3
+import pygame, os
+
+#Catppuccin-Mocha in Idle
+# 300 lines of terrible, terrible code
+# There is no organization to it whatsoever
+# I kinda just added where I thought It might be good; I can refactor it tho
+# As of right now it is functional and is a basic drawing program
+# 6//2023: added a system for reading and writing to and from files
+# now you can save your beautiful drawings!!
+
+pygame.init()
+pygame.font.init()
+
+COLOR_INACTIVE = pygame.Color('lightskyblue3')
+COLOR_ACTIVE = pygame.Color('dodgerblue2')
+FONT = pygame.font.Font(None, 32)
+
+
+font = pygame.font.SysFont(None, 25)
+
+squareWidth  = 10
+
+width = 1200
+height = 700
+
+window = pygame.display.set_mode((width,height))
+clock = pygame.time.Clock()
+
+####################################################################################################
+# Putting this in the same file bc I don't want to deal with multiple files right now, I can split this one file into seperate files when I get home or whatever
+class Button:
+    def __init__(self, x: int, y: int, radius: int = 10, color: tuple = (0, 0, 0), command = None):
+        self.x: int = x
+        self.y: int = y
+        self.radius: int = radius # The size of the button which defualts to 10
+        self.color: tuple = color # The RGB values used to tell if that button has been clicked or not; default is black
+        self.command = command
+        
+    def isCollideMouse(self, mouseX: int, mouseY: int) -> bool:
+        dist: float = (((mouseX-self.x)**2)+((mouseY-self.y)**2))**0.5
+
+        return True if dist <= self.radius else False
+
+    def clicked(self, mouseX: int, mouseY: int, mouseButtons: tuple, currentColor):
+        if self.isCollideMouse(mouseX, mouseY) and mouseButtons[0]:
+            return self.color
+
+        return currentColor
+
+    def run(self):
+        self.command()
+
+#####################################################################################################
+# This can (not) (( This is a Python program, not a c++ program! )) be used to define the blocks in the level or inherit this class 
+class Square:
+    def __init__ (self, x: int, y:  int, width: int, height: int, color: tuple = (0,0,0)):
+        self.x: int = x
+        self.y: int = y
+        self.width: int = width
+        self.height: int = height
+        self.color: tuple = color
+
+######################################################################################################
+# Not mine
+# Found it on SO
+class Input:
+    def __init__(self, x, y, w, h, text=''):
+        self.rect = pygame.Rect(x, y, w, h)
+        self.color = COLOR_INACTIVE
+        self.text = text
+        self.txt_surface = FONT.render(text, True, self.color)
+        self.active = False
+
+    def handleEvent(self, event):        
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            # If the user clicked on the input_box rect.
+            if self.rect.collidepoint(event.pos):
+                # Toggle the active variable.
+                self.active = not self.active
+            else:
+                self.active = False
+            # Change the current color of the input box.
+            self.color = COLOR_ACTIVE if self.active else COLOR_INACTIVE
+        if event.type == pygame.KEYDOWN:
+            if self.active:
+                if event.key == pygame.K_RETURN:
+                    print(self.text)
+                    self.text = ""
+                elif event.key == pygame.K_BACKSPACE:
+                    self.text = self.text[:-1]
+                else:
+                    self.text += event.unicode
+                # Re-render the text.
+                self.txt_surface = FONT.render(self.text, True, self.color)
+
+    def update(self):
+        # Resize the box if the text is too long.
+        width = max(200, self.txt_surface.get_width()+10)
+        self.rect.w = width
+
+    def draw(self, screen):
+        # Blit the text.
+        screen.blit(self.txt_surface, (self.rect.x+5, self.rect.y+5))
+        # Blit the rect.
+        pygame.draw.rect(screen, self.color, self.rect, 2)
+
+#######################################################################################################
+
+# Just some helper functions
+def invertColor(currentColor: tuple):
+        return (255 - currentColor[0], 255 - currentColor[1], 255 - currentColor[2])
+
+def roundToNearest(number: int, toNearest: int):
+    return number - (number % toNearest)
+
+def list_files():
+    files = list(os.listdir("."))
+
+    for file in files:
+        if file[-4::] == ".pic":
+            print(file)
+
+    print()
+
+def parse(line):
+    # We gotta parse the line for the x, y, color and the width
+    # Square : [x: 0, y: 0, color: (255, 255, 255), width: 25, row: 0, col: 0]
+    # row col r g b 
+
+    # We really don't want to talk about this parsing
+    # There is probably a much. much easier way than this
+    line = line.split()
+
+    line = [int(i) for i in line]
+
+    row = line[0]
+    col = line[1]
+    color = (line[2], line[3], line[4])
+
+    return row, col, color
+
+# Duh
+def main():  
+    defaultColor = (255, 255, 255)
+    selectedColor = (0, 0, 0)
+    
+    canvas = [[Square(row, col, squareWidth, squareWidth, color = (defaultColor)) for row in range(0, width-600, squareWidth)] for col in range(50, height - 50, squareWidth)]
+
+    fileName = ""
+    file = ""
+    
+    ########### Functions #############
+    def readFromFile(canvas, file):
+        try:
+            with open(f"{file}.pic", "r") as f:
+                for line in f:
+                    row, col, color = parse(line)
+                    
+                    canvas[row][col] = Square(col*squareWidth, row*squareWidth, squareWidth, squareWidth, color = color)
+        except:
+            print("File missing")
+                    
+    def saveToFile(canvas):
+        '''
+        row col r g b  
+        '''
+        
+        if fileName != "":
+            with open(f"{fileName}.pic", "w") as file:
+                for _row, row in enumerate(canvas):
+                    for _col, sq in enumerate(row):
+                        file.write(f"{_row} {_col} {sq.color[0]} {sq.color[1]} {sq.color[2]}\n")
+        else:
+            print("File Name Missing")
+            
+    def drawSquares():
+        for row in canvas:
+                for rect in row:
+                    pygame.draw.rect(window, rect.color, (rect.x, rect.y, rect.width, rect.height))
+
+    def drawButton(button: Button):
+        if button.color == (255,255,255):
+            pygame.draw.circle(window, "black", (button.x, button.y), button.radius, width = 1)
+        else:    
+            pygame.draw.circle(window, button.color, (button.x, button.y), button.radius)
+
+    def clearCanvas():
+        for row in canvas:
+            for rect in row:
+                rect.color = (255, 255, 255)
+
+    def fill(color):
+        for row in canvas:
+            for rect in row:
+                if rect.y > 25:
+                    rect.color = color
+    
+    ######################################
+
+    buttonTopY = 25
+    buttonsTop = [
+        Button(50,buttonTopY, color = (255,0,0), command = clearCanvas),
+        Button(250,buttonTopY, color = (128, 63, 32), command = lambda: fill(selectedColor)),
+        Button(450,buttonTopY, color = (255,255,0), command = lambda: saveToFile(canvas)),
+        Button(850, buttonTopY, color = (255, 128, 128), command = lambda: readFromFile(canvas, file)),
+        Button(700,height-25, color=(162, 39, 178), command = list_files),
+    ]
+    
+    # For the bottom menu of colors
+    buttonY = height-25;
+    buttons = [
+        Button(50,buttonY, color = (0,0,0)), # Black
+        Button(100,buttonY, color = (255,0,0)), # Red
+        Button(150,buttonY, color = (255,165,0)), # Orange
+        Button(200, buttonY, color = (255,255,0)), # Yellow
+        Button(250,buttonY, color = (0,255,0)), # Green
+        Button(300,buttonY, color = (0,0,255)), #Blue
+        Button(350,buttonY, color = (75,0,150)), # Indigo
+        Button(400,buttonY, color = (128,0,128)), # Purple
+        Button(450,buttonY, color = (255,255,255)), # White
+    ]
+  
+    # Text to say which color is selected
+    #font = pygame.font.Font("")
+
+    # A repersenation of the canvas as a 2d-list
+    
+
+    fileInput = Input(600, 12.5, 70, 25)
+    readFileInput = Input(990, 12.5, 70, 25)
+    running = True
+    while running:
+        window.fill("white")  #Clear the screen
+
+        mouseButtons = pygame.mouse.get_pressed()
+        
+        rawMouseX, rawMouseY = pygame.mouse.get_pos()
+        mouseX = roundToNearest(rawMouseX, squareWidth)
+        mouseY = roundToNearest(rawMouseY, squareWidth)
+
+        # Creates a threshold that the mouse has to be in to paint pixels
+        # Make sure the mouse is above the lower menu and below the upper menu
+        inCanvas: bool = rawMouseY < height - 50 and rawMouseY > 50 and rawMouseX < width - 600
+        
+
+        # if the left mouse button is pressed and the mouse is within the canvas
+        # we then calculate the index of the current square and change the color
+        # A much better system than appending a square an unorganized list and drawing the squares in the list
+        # This way the list is always 135 elements long
+        if pygame.mouse.get_focused() and mouseButtons[0] and inCanvas:
+            # listIndexX = mouseX//squareWidth
+            # listIndexY = mouseY//squareWidth
+
+            listIndexX = rawMouseX//squareWidth
+            listIndexY = (rawMouseY-50)//squareWidth
+
+            canvas[listIndexY][listIndexX] = Square(mouseX, mouseY, squareWidth, squareWidth, selectedColor)
+            
+    
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            # Give the input box the event
+            fileInput.handleEvent(event)
+            readFileInput.handleEvent(event)
+
+        # Draw the canavs
+        drawSquares()
+
+        # These two loops draw the buttons and handle any event that matters
+        for button in buttons:
+            drawButton(button)
+            selectedColor = button.clicked(rawMouseX, rawMouseY, mouseButtons, selectedColor)
+
+        for button in buttonsTop:
+            drawButton(button)
+            if mouseButtons[0] and button.isCollideMouse(rawMouseX, rawMouseY):
+                button.run()
+        
+        if selectedColor == None:
+            selectedColor = defaultColor
+
+        # grey rectangle to indicate which square we are over
+        pygame.draw.rect(window, "darkgrey", (mouseX,  mouseY, squareWidth, squareWidth), 2) if inCanvas else None
+
+        # a circle to say what color is currently selected
+        outline = 1 if selectedColor == (255, 255, 255) else 0
+        pygame.draw.circle(window, selectedColor if selectedColor != (255, 255, 255) else (0, 0, 0) , (width-50, buttonY), 10, width = outline)
+
+        pygame.draw.line(window, "grey", (0, height - 50), (width-600, height-50))
+        pygame.draw.line(window, "grey", (0, 50), (width-600, 50))
+        pygame.draw.line(window, "grey", (width-600, 50), (width-600, height-50))
+
+        # Drawing the text to the screen to label the buttons
+        window.blit(font.render("Selected Color: ", True, "black"), (width-200, buttonY-7))
+        window.blit(font.render("List files", True, "black"), (600, buttonY-7))
+        window.blit(font.render("Clear Canvas", True, "black"), (80, buttonTopY-7))
+        window.blit(font.render("Fill Background", True, "black"), (280, buttonTopY-7))
+        window.blit(font.render("Save to File", True, "black"), (480, buttonTopY-7))
+        window.blit(font.render("Read from file", True, "black"), (870, buttonTopY-7))
+
+        fileInput.update()
+        fileInput.draw(window)
+        fileName = fileInput.text
+
+        readFileInput.update()
+        readFileInput.draw(window)
+        file = readFileInput.text
+        
+        pygame.display.flip()
+        
+        clock.tick(60)
+        
+    pygame.quit()
+    return 0
+
+if __name__ ==  "__main__":
+    print(main())
