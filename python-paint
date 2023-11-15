@@ -118,7 +118,7 @@ def list_files():
     files = list(os.listdir("."))
 
     for file in files:
-        if file[-4::] == ".pic":
+        if file[-4::] == ".iif":
             print(file)
 
     print()
@@ -145,7 +145,7 @@ def main():
     defaultColor = (255, 255, 255)
     selectedColor = (0, 0, 0)
     
-    canvas = [[Square(row, col, squareWidth, squareWidth, color = (defaultColor)) for row in range(0, width-600, squareWidth)] for col in range(50, height - 50, squareWidth)]
+    canvas = [[Square(row, col, squareWidth, squareWidth, color = (defaultColor)) for row in range(0, width-560, squareWidth)] for col in range(30, height - 30, squareWidth)]
 
     fileName = ""
     file = ""
@@ -153,7 +153,7 @@ def main():
     ########### Functions #############
     def readFromFile(canvas, file):
         try:
-            with open(f"{file}.pic", "r") as f:
+            with open(f"{file}.iif", "r") as f:
                 for line in f:
                     row, col, color = parse(line)
                     
@@ -167,7 +167,7 @@ def main():
         '''
         
         if fileName != "":
-            with open(f"{fileName}.pic", "w") as file:
+            with open(f"{fileName}.iif", "w") as file:
                 for _row, row in enumerate(canvas):
                     for _col, sq in enumerate(row):
                         file.write(f"{_row} {_col} {sq.color[0]} {sq.color[1]} {sq.color[2]}\n")
@@ -197,18 +197,18 @@ def main():
                     rect.color = color
     
     ######################################
+    buttonY = height-15;
 
-    buttonTopY = 25
+    buttonTopY = 15
     buttonsTop = [
         Button(50,buttonTopY, color = (255,0,0), command = clearCanvas),
         Button(250,buttonTopY, color = (128, 63, 32), command = lambda: fill(selectedColor)),
         Button(450,buttonTopY, color = (255,255,0), command = lambda: saveToFile(canvas)),
         Button(850, buttonTopY, color = (255, 128, 128), command = lambda: readFromFile(canvas, file)),
-        Button(700,height-25, color=(162, 39, 178), command = list_files),
+        Button(700,buttonY, color=(162, 39, 178), command = list_files),
     ]
     
     # For the bottom menu of colors
-    buttonY = height-25;
     buttons = [
         Button(50,buttonY, color = (0,0,0)), # Black
         Button(100,buttonY, color = (255,0,0)), # Red
@@ -227,8 +227,8 @@ def main():
     # A repersenation of the canvas as a 2d-list
     
 
-    fileInput = Input(600, 12.5, 70, 25)
-    readFileInput = Input(990, 12.5, 70, 25)
+    fileInput = Input(600, 12.5, 70, 15)
+    readFileInput = Input(990, 12.5, 70, 15)
     running = True
     while running:
         window.fill("white")  #Clear the screen
@@ -241,7 +241,7 @@ def main():
 
         # Creates a threshold that the mouse has to be in to paint pixels
         # Make sure the mouse is above the lower menu and below the upper menu
-        inCanvas: bool = rawMouseY < height - 50 and rawMouseY > 50 and rawMouseX < width - 600
+        inCanvas: bool = rawMouseY < height - 30 and rawMouseY > 30 and rawMouseX < width - 560
         
 
         # if the left mouse button is pressed and the mouse is within the canvas
@@ -253,7 +253,7 @@ def main():
             # listIndexY = mouseY//squareWidth
 
             listIndexX = rawMouseX//squareWidth
-            listIndexY = (rawMouseY-50)//squareWidth
+            listIndexY = (rawMouseY-30)//squareWidth
 
             canvas[listIndexY][listIndexX] = Square(mouseX, mouseY, squareWidth, squareWidth, selectedColor)
             
@@ -288,9 +288,9 @@ def main():
         outline = 1 if selectedColor == (255, 255, 255) else 0
         pygame.draw.circle(window, selectedColor if selectedColor != (255, 255, 255) else (0, 0, 0) , (width-50, buttonY), 10, width = outline)
 
-        pygame.draw.line(window, "grey", (0, height - 50), (width-600, height-50))
-        pygame.draw.line(window, "grey", (0, 50), (width-600, 50))
-        pygame.draw.line(window, "grey", (width-600, 50), (width-600, height-50))
+        pygame.draw.line(window, "grey", (0, height - 30), (width-560, height-30))
+        pygame.draw.line(window, "grey", (0, 30), (width-560, 30))
+        pygame.draw.line(window, "grey", (width-560, 30), (width-560, height-30))
 
         # Drawing the text to the screen to label the buttons
         window.blit(font.render("Selected Color: ", True, "black"), (width-200, buttonY-7))
